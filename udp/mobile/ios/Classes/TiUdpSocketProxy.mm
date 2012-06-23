@@ -218,6 +218,7 @@ static NSArray* GetBytesFromData(NSData* data)
 
 -(void)_send:(NSData*)data withDict:(NSDictionary*)args
 {
+    if (self->_cfSocket) return;
     int err;
     ssize_t bytesWritten;
     struct sockaddr* addrPtr;
@@ -538,6 +539,15 @@ static void HostResolveCallback(CFHostRef theHost, CFHostInfoType typeInfo, cons
     if (err == 0)
     {
         self->_cfSocket = CFSocketCreateWithNative(NULL, sock, kCFSocketReadCallBack, SocketReadCallback, &context);
+        
+        // Make sure that same listening socket address gets reused after every connection
+        int existingValue = 1;
+        setsockopt( sock,
+                   SOL_SOCKET, SO_REUSEADDR, (void *)&existingValue,
+                   sizeof(existingValue));
+        setsockopt( sock,
+                   SOL_SOCKET, SO_BROADCAST, (void *)&existingValue,
+                   sizeof(existingValue));
         
         // The socket will now take care of cleaning up our file descriptor.
         
